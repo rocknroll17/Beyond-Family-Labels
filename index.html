@@ -220,8 +220,8 @@
         <h2 class="title is-3">Overview</h2>
         <img src="static/images/teaser.png" alt="The 17 training species of CtrlAVES3D on the Linnaean tree, colored by order, with the lowest shared rank from same family up to outgroup" style="width:100%;" loading="lazy">
       <h2 class="subtitle has-text-centered">
-        <strong>Beyond family labels.</strong>
-        The 17 training species of CtrlAVES3D on the Linnaean tree, colored by order. The height at which two lineages join marks their lowest shared rank, from same family up to outgroup; each rank sets the distance <i>d</i><sub>tax</sub> that our prior reads. The family-supervised contrastive loss of AniMer+ keeps a single bit of this tree: whether a pair joins below the dashed red line. Our Ornstein&ndash;Uhlenbeck (OU) prior uses every rank, pulling the shape codes of two species together more strongly the more closely they are related, so the shape space carries graded structure rather than a same-family indicator.
+        <strong>The 17 training species on the taxonomic tree.</strong>
+        AniMer+ only asks whether two species join below the red line (same family). Our prior uses every level: the closer two species are, the more strongly their shapes are tied.
       </h2>
       </div>
     </div>
@@ -238,13 +238,204 @@
         <img src="static/images/architecture.png" alt="Method at a glance: (a) AniMer+ encoder and AVES shape head produce a shape code; (b) a taxonomic OU prior with learned alpha, sigma, mu over a fixed Linnaean rank-distance matrix gives a Gaussian NLL on shape codes; (c) the OU loss replaces the family-level contrastive term in the training objective" style="width:100%;" loading="lazy">
         <div class="content has-text-justified" style="margin-top:1rem;">
           <p>
-            <strong>Method at a glance.</strong>
-            <strong>(a)</strong> The AniMer+ encoder produces AVES shape codes <i>&beta;</i> from a single image.
-            <strong>(b)</strong> Across species, <i>&beta;</i> is regularized by an OU prior parameterized by learnable (<i>&alpha;</i>, <i>&sigma;</i>, <i>&mu;</i>) over a fixed Linnaean rank distance matrix; the NLL of this Gaussian is <i>L</i><sub>OU</sub>.
-            <strong>(c)</strong> <i>L</i><sub>OU</sub> replaces the family-level contrastive term of AniMer+ (<i>w</i><sub>con</sub> = 0), so that on birds <i>L</i><sub>total</sub> = <i>L</i><sub>AVES</sub> + <i>&lambda;</i><sub>OU</sub> <i>L</i><sub>OU</sub>.
-            Blue: the existing network and fixed taxonomy. Orange: what we add.
+            <strong>Overview.</strong> We keep the AniMer+ network (blue) and replace its family contrastive loss with our taxonomic OU prior (orange).
           </p>
         </div>
+        <!-- How it works: graphical explainer -->
+        <style>
+          .hiw { margin-top: 2.5rem; text-align: left; }
+          .hiw h3 { font-weight: 700; font-size: 1.35rem; text-align: center; margin-bottom: 1.25rem; }
+          .hiw .hiw-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; height: 100%; }
+          .hiw .hiw-step { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; color: #fff; background: #6b7280; border-radius: 999px; padding: 0.1rem 0.6rem; margin-bottom: 0.4rem; }
+          .hiw .hiw-step.ours { background: #ea580c; }
+          .hiw .hiw-card h4 { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.4rem; }
+          .hiw .hiw-card p { font-size: 0.92rem; color: #374151; margin-top: 0.5rem; }
+          .hiw svg { width: 100%; height: auto; display: block; }
+          .hiw svg text { font-family: Inter, sans-serif; }
+          .hiw .hiw-slider { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.4rem; font-size: 0.88rem; }
+          .hiw .hiw-slider input { flex: 1; accent-color: #ea580c; }
+          .hiw .hiw-slider output { font-variant-numeric: tabular-nums; min-width: 2.6rem; font-weight: 600; }
+        </style>
+
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+          <defs>
+            <symbol id="hiw-bird" viewBox="0 0 64 64">
+              <circle cx="40" cy="21" r="8.5"/>
+              <path d="M47 18.5 L56 22 L47 25.5 Z"/>
+              <path d="M35 23 C22 23 14 33 16 43 L7 52 L21 48.5 C30 52 42 47 45.5 37 C48 30 46 25 40 23.5 Z"/>
+            </symbol>
+            <marker id="hiw-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#9ca3af"/></marker>
+            <g id="hiw-tree">
+              <g stroke="#d1d5db" stroke-dasharray="3 4">
+                <line x1="44" y1="80" x2="292" y2="80"/>
+                <line x1="44" y1="34" x2="292" y2="34"/>
+              </g>
+              <g font-size="10" fill="#6b7280" text-anchor="end">
+                <text x="40" y="83">family</text>
+                <text x="40" y="37">order</text>
+              </g>
+              <g fill="#0d9488">
+                <use href="#hiw-bird" x="64" y="102" width="32" height="32"/>
+                <use href="#hiw-bird" x="114" y="102" width="32" height="32"/>
+              </g>
+              <g fill="#7c3aed">
+                <use href="#hiw-bird" x="174" y="102" width="32" height="32"/>
+                <use href="#hiw-bird" x="224" y="102" width="32" height="32"/>
+              </g>
+            </g>
+          </defs>
+        </svg>
+
+        <div class="hiw">
+          <h3>How it works</h3>
+          <div class="columns">
+            <!-- 1. AniMer+ -->
+            <div class="column is-one-third">
+              <div class="hiw-card">
+                <span class="hiw-step">ANIMER+</span>
+                <h4>Tree cut at family &rarr; 1 or 0</h4>
+                <svg viewBox="0 0 300 290" role="img" aria-label="AniMer+ cuts the taxonomic tree at the family level, leaving a binary same-family matrix">
+                  <use href="#hiw-tree"/>
+                  <g stroke-width="2.5" fill="none" stroke-linecap="round">
+                    <path d="M80 104 V80 H130 V104" stroke="#374151"/>
+                    <path d="M190 104 V80 H240 V104" stroke="#374151"/>
+                    <path d="M105 80 V34 H215 V80" stroke="#d1d5db" stroke-dasharray="4 4"/>
+                  </g>
+                  <line x1="56" y1="70" x2="290" y2="70" stroke="#dc2626" stroke-width="2"/>
+                  <text x="290" y="64" font-size="10" font-weight="600" fill="#dc2626" text-anchor="end">discarded above</text>
+                  <g class="hiw-matrix" data-kind="binary" font-size="11" text-anchor="middle"></g>
+                </svg>
+                <p>Same family = 1, anything else = 0.</p>
+              </div>
+            </div>
+
+            <!-- 2. Ours: covariance -->
+            <div class="column is-one-third">
+              <div class="hiw-card">
+                <span class="hiw-step ours">OURS</span>
+                <h4>Whole tree &rarr; covariance</h4>
+                <svg viewBox="0 0 300 290" role="img" aria-label="Our prior reads every rank of the tree and turns it into a continuous covariance exp(-alpha d)">
+                  <use href="#hiw-tree"/>
+                  <g stroke="#ea580c" stroke-width="2.5" fill="none" stroke-linecap="round">
+                    <path d="M80 104 V80 H130 V104"/>
+                    <path d="M190 104 V80 H240 V104"/>
+                    <path d="M105 80 V34 H215 V80"/>
+                  </g>
+                  <g class="hiw-matrix" data-kind="ou" font-size="11" text-anchor="middle"></g>
+                </svg>
+                <div class="hiw-slider">
+                  <label for="hiw-alpha">&alpha;</label>
+                  <input id="hiw-alpha" type="range" min="0.2" max="3" step="0.05" value="1">
+                  <output id="hiw-alpha-out" for="hiw-alpha">1.00</output>
+                </div>
+                <p>Similarity decays with tree distance: <i>e</i><sup>&minus;&alpha;<i>d</i></sup>.</p>
+              </div>
+            </div>
+
+            <!-- 3. Ours: effect in shape space -->
+            <div class="column is-one-third">
+              <div class="hiw-card">
+                <span class="hiw-step ours">OURS</span>
+                <h4>NLL pulls codes toward relatives</h4>
+                <svg viewBox="0 0 300 290" role="img" aria-label="In shape space each code is pulled toward its relatives with the covariance strength; the space becomes organized by the tree and an unseen species borrows shape from its relatives">
+                  <rect x="6" y="10" width="288" height="250" rx="10" fill="#fff" stroke="#e5e7eb"/>
+                  <text x="16" y="28" font-size="10" fill="#9ca3af">shape space</text>
+                  <ellipse cx="98" cy="132" rx="46" ry="18" transform="rotate(-62 98 132)" fill="#0d9488" fill-opacity="0.07" stroke="#0d9488" stroke-opacity="0.6" stroke-dasharray="4 3"/>
+                  <ellipse cx="203" cy="130" rx="46" ry="18" transform="rotate(62 203 130)" fill="#7c3aed" fill-opacity="0.07" stroke="#7c3aed" stroke-opacity="0.6" stroke-dasharray="4 3"/>
+                  <g stroke="#9ca3af" stroke-width="1.5" marker-end="url(#hiw-arrow)">
+                    <line x1="56" y1="58" x2="78" y2="90"/>
+                    <line x1="94" y1="214" x2="108" y2="178"/>
+                    <line x1="246" y1="56" x2="224" y2="88"/>
+                    <line x1="206" y1="214" x2="194" y2="178"/>
+                  </g>
+                  <g fill="#fff" stroke-width="2">
+                    <circle cx="50" cy="50" r="7" stroke="#0d9488"/>
+                    <circle cx="92" cy="222" r="7" stroke="#0d9488"/>
+                    <circle cx="252" cy="48" r="7" stroke="#7c3aed"/>
+                    <circle cx="208" cy="222" r="7" stroke="#7c3aed"/>
+                  </g>
+                  <g stroke="#ea580c" stroke-linecap="round">
+                    <line x1="86" y1="104" x2="110" y2="162" stroke-width="7"/>
+                    <line x1="214" y1="104" x2="192" y2="162" stroke-width="7"/>
+                    <line x1="86" y1="104" x2="214" y2="104" stroke-width="2.5"/>
+                    <line x1="110" y1="162" x2="192" y2="162" stroke-width="2.5"/>
+                  </g>
+                  <g fill="#0d9488" stroke="#fff" stroke-width="2.5">
+                    <circle cx="86" cy="104" r="10"/><circle cx="110" cy="162" r="10"/>
+                  </g>
+                  <g fill="#7c3aed" stroke="#fff" stroke-width="2.5">
+                    <circle cx="214" cy="104" r="10"/><circle cx="192" cy="162" r="10"/>
+                  </g>
+                  <g stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3 3">
+                    <line x1="150" y1="200" x2="116" y2="170"/>
+                    <line x1="150" y1="200" x2="186" y2="170"/>
+                  </g>
+                  <circle cx="150" cy="212" r="14" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="4 3"/>
+                  <text x="150" y="217" font-size="13" font-weight="700" text-anchor="middle" fill="#374151">?</text>
+                  <text x="150" y="244" font-size="10" text-anchor="middle" fill="#374151">unseen species borrows from relatives</text>
+                  <g font-size="9.5" fill="#374151">
+                    <circle cx="20" cy="276" r="4.5" fill="#fff" stroke="#6b7280" stroke-width="1.5"/><text x="29" y="279">before</text>
+                    <circle cx="74" cy="276" r="5" fill="#6b7280"/><text x="83" y="279">after</text>
+                    <line x1="122" y1="276" x2="138" y2="276" stroke="#ea580c" stroke-width="5" stroke-linecap="round"/><text x="143" y="279">pull = &Sigma;</text>
+                  </g>
+                </svg>
+                <p>Strong pull within a family, weak within an order: the space gets organized by the tree.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <script>
+          (function () {
+            var names = ['Song Sp.', 'Wh.-cr. Sp.', 'Yellow W.', "Wilson's W."];
+            var colors = ['#0d9488', '#0d9488', '#7c3aed', '#7c3aed'];
+            var D = [[0, 1, 2, 2], [1, 0, 2, 2], [2, 2, 0, 1], [2, 2, 1, 0]]; // 0 species, 1 family, 2 order
+            var NS = 'http://www.w3.org/2000/svg';
+            var slider = document.getElementById('hiw-alpha');
+            var out = document.getElementById('hiw-alpha-out');
+            if (!slider) return;
+            function el(tag, attrs, parent) {
+              var e = document.createElementNS(NS, tag);
+              for (var k in attrs) e.setAttribute(k, attrs[k]);
+              parent.appendChild(e);
+              return e;
+            }
+            function shade(s) {
+              return 'rgb(' + Math.round(255 - 21 * s) + ',' + Math.round(247 - 159 * s) + ',' + Math.round(237 - 225 * s) + ')';
+            }
+            var mats = [];
+            document.querySelectorAll('.hiw .hiw-matrix').forEach(function (g) {
+              var x0 = 116, y0 = 156, c = 32, cells = [];
+              for (var i = 0; i < 4; i++) {
+                el('text', { x: x0 - 6, y: y0 + i * c + 20, 'text-anchor': 'end', fill: colors[i], 'font-weight': 600 }, g).textContent = names[i];
+                var row = [];
+                for (var j = 0; j < 4; j++) {
+                  row.push([el('rect', { x: x0 + j * c, y: y0 + i * c, width: c - 2, height: c - 2, rx: 4 }, g),
+                            el('text', { x: x0 + j * c + (c - 2) / 2, y: y0 + i * c + 19 }, g)]);
+                }
+                cells.push(row);
+              }
+              mats.push({ kind: g.getAttribute('data-kind'), cells: cells });
+            });
+            function update() {
+              var a = parseFloat(slider.value);
+              out.textContent = a.toFixed(2);
+              mats.forEach(function (m) {
+                for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) {
+                  var s = m.kind === 'binary' ? (D[i][j] <= 1 ? 1 : 0) : Math.exp(-a * D[i][j]);
+                  var cell = m.cells[i][j];
+                  cell[0].setAttribute('fill', m.kind === 'binary' ? (s ? '#9ca3af' : '#f3f4f6') : shade(s));
+                  cell[1].setAttribute('fill', (m.kind === 'binary' ? s : s > 0.55) ? '#fff' : '#111827');
+                  cell[1].textContent = m.kind === 'binary' ? String(s) : s.toFixed(2);
+                }
+              });
+            }
+            slider.addEventListener('input', update);
+            update();
+          })();
+        </script>
+        <!-- End how it works -->
       </div>
     </div>
   </div>
@@ -256,19 +447,108 @@
   <div class="hero-body">
     <div class="container">
       <h2 class="title is-3 has-text-centered">Results</h2>
+      <style>
+        .res-slide { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem 1.5rem; }
+        .res-chip { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; color: #fff; background: #ea580c; border-radius: 999px; padding: 0.1rem 0.65rem; }
+        .res-title { font-weight: 700; font-size: 1.2rem; margin: 0 0 0.9rem; }
+        .res-cap { font-size: 0.9rem; color: #4b5563; margin-top: 0.75rem; text-align: center; }
+        .res-bridge { margin-top: 1rem; text-align: center; font-weight: 600; color: #ea580c; }
+        .res-chart { max-width: 460px; margin: 0.5rem auto 0; }
+        .res-chart svg { width: 100%; height: auto; display: block; }
+        .res-chart svg text { font-family: Inter, sans-serif; }
+        .res-group-label { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #ea580c; margin: 0.25rem 0 0.4rem; }
+        .res-group-label.seen { color: #6b7280; margin-top: 1rem; }
+        .res-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .res-tile { border: 1px solid #fdba74; background: #fffaf5; border-radius: 10px; padding: 0.7rem 0.9rem; }
+        .res-tile.seen { border-color: #e5e7eb; background: #f9fafb; }
+        .res-metric { font-size: 0.85rem; color: #4b5563; }
+        .res-val { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+        .res-tile.seen .res-val { font-size: 1.05rem; }
+        .res-from { color: #9ca3af; }
+        .res-to { font-weight: 700; color: #111827; }
+        .res-delta { font-weight: 700; color: #ea580c; font-variant-numeric: tabular-nums; }
+        .res-tile.seen .res-delta { color: #6b7280; font-weight: 600; }
+        .res-table-wrap { overflow-x: auto; }
+        .res-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+        .res-table th, .res-table td { padding: 0.4rem 0.55rem; text-align: center; white-space: nowrap; }
+        .res-table tbody th { text-align: left; font-weight: 500; }
+        .res-table thead tr:first-child th { border-top: 2px solid #111827; }
+        .res-table thead tr:last-child th { border-bottom: 1px solid #111827; font-weight: 600; font-size: 0.82rem; color: #374151; }
+        .res-table tbody tr:last-child th, .res-table tbody tr:last-child td { border-bottom: 2px solid #111827; }
+        .res-table .grp { display: block; font-size: 0.7rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; }
+        .res-table th.cow .grp { color: #ea580c; }
+        .res-table .cow { background: #fff7ed; }
+        .res-table tr.spec th, .res-table tr.spec td { color: #9ca3af; font-style: italic; }
+        .res-table tr.base th, .res-table tr.base td { border-top: 1px solid #e5e7eb; }
+        .res-table tr.ours th { font-weight: 700; color: #ea580c; }
+        .res-table tr.ours td { background: #fff1e6; }
+        .res-table td.best { font-weight: 700; }
+        .res-table .pm { font-size: 0.72rem; color: #6b7280; margin-left: 1px; }
+        @media (max-width: 480px) { .res-tiles { grid-template-columns: 1fr; } .res-slide { padding: 1rem; } }
+      </style>
       <div id="results-carousel" class="carousel results-carousel">
         <div class="item">
-          <img src="static/images/qualitative.png" alt="Qualitative comparison on two CUB test images and two CowBird test instances: input with ground-truth keypoints, retrained AniMer+ baseline, and ours" loading="lazy" style="max-width:960px; margin:0 auto; display:block;"/>
-          <h2 class="subtitle has-text-centered">
-            <strong>Qualitative comparison on two CUB test images (top) and two CowBird test instances (bottom).</strong> For each species, the first panel shows the input with the ground-truth keypoints (green dots) and a red circle on the baseline's worst keypoint; the retrained AniMer+ baseline (red crosses) and the OU fine-tune (blue crosses) follow, and gray lines join each prediction to its ground-truth keypoint. The badge is the per-image PCK@0.1.
-          </h2>
+          <div class="res-slide">
+            <h4 class="res-title">Keypoints move toward the ground truth</h4>
+            <img src="static/images/qualitative.png" alt="Qualitative comparison on two CUB test images and two CowBird test instances: input with ground-truth keypoints, retrained AniMer+ baseline, and ours" loading="lazy" style="width:100%; display:block;"/>
+            <p class="res-cap">CUB (top) and CowBird (bottom). Green: ground truth &middot; red &times;: AniMer+ &middot; blue &times;: ours.</p>
+          </div>
         </div>
-
         <div class="item">
-          <img src="static/images/permutation_null.png" alt="Real vs permuted taxonomy ablation on CowBird" loading="lazy"/>
-          <h2 class="subtitle has-text-centered">
-            <strong>Real vs. permuted taxonomy ablation.</strong> CowBird AUC and PCK@0.1 under three configurations: (a) the AniMer+ baseline, (b) the OU prior with a label-permuted distance matrix, and (c) the OU prior with the real Linnaean distance matrix (both OU runs at <i>&lambda;</i><sub>OU</sub> = 10<sup>&minus;4</sup>, constant learning rate).
-          </h2>
+          <div class="res-slide">
+            <h4 class="res-title">The gain is on unseen species</h4>
+            <div class="res-table-wrap">
+            <table class="res-table">
+              <thead>
+                <tr><th rowspan="2">Method</th><th colspan="2">CUB <span class="grp">seen</span></th><th colspan="2" class="cow">CowBird <span class="grp">unseen</span></th><th>CtrlAVES3D <span class="grp">seen</span></th></tr>
+                <tr><th>AUC</th><th>PCK@0.1</th><th class="cow">AUC</th><th class="cow">PCK@0.1</th><th>AUC</th></tr>
+              </thead>
+              <tbody>
+<tr class=""><th>AVES</th><td class="">79.70</td><td class="">25.20</td><td class="cow ">46.10</td><td class="cow ">5.60</td><td class="">85.90</td></tr>
+<tr class=""><th>HMR2.0</th><td class="">87.70</td><td class="">50.00</td><td class="cow ">59.10</td><td class="cow ">12.20</td><td class="">91.60</td></tr>
+<tr class="spec"><th>AniMer-A<sup>&dagger;</sup></th><td class="">91.90</td><td class="">74.80</td><td class="cow ">65.70</td><td class="cow ">19.40</td><td class="">92.90</td></tr>
+<tr class="base"><th>AniMer+</th><td class="best">89.50</td><td class="best">59.40</td><td class="cow ">59.30</td><td class="cow ">16.40</td><td class="">93.00</td></tr>
+<tr class="ours"><th>Ours</th><td class="">89.30<span class="pm">&plusmn;0.02</span></td><td class="">57.84<span class="pm">&plusmn;0.09</span></td><td class="cow best">60.80<span class="pm">&plusmn;0.10</span></td><td class="cow best">18.86<span class="pm">&plusmn;0.27</span></td><td class="best">93.05<span class="pm">&plusmn;0.01</span></td></tr>
+              </tbody>
+            </table>
+            </div>
+            <p class="res-cap">Bold: best among unified bird+mammal models. Ours: mean &plusmn; std over 5 seeds. <sup>&dagger;</sup>Bird-only specialist, not a like-for-like comparison.</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="res-slide">
+            <h4 class="res-title">The gain comes from the real tree</h4>
+            <div class="res-chart"><svg viewBox="0 0 420 100" role="img" aria-label="AniMer+ 16.40; shuffled tree 18.49; real tree 20.25">
+<text x="0" y="21" font-size="13" fill="#374151">AniMer+</text>
+<rect x="110" y="7" width="206" height="20" rx="4" fill="#9ca3af"/>
+<text x="324" y="22" font-size="13" fill="#374151">16.40</text>
+<text x="0" y="53" font-size="13" fill="#374151">shuffled tree</text>
+<rect x="110" y="39" width="232" height="20" rx="4" fill="#9ca3af"/>
+<text x="350" y="54" font-size="13" fill="#374151">18.49</text>
+<text x="0" y="85" font-size="13" fill="#374151">real tree</text>
+<rect x="110" y="71" width="254" height="20" rx="4" fill="#ea580c"/>
+<text x="372" y="86" font-size="13" font-weight="700" fill="#ea580c">20.25</text>
+</svg></div>
+            <p class="res-cap">CowBird PCK@0.1. Same loss, but species labels shuffled in the distance matrix &rarr; the gain shrinks. (Ablation setting.)</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="res-slide">
+            <h4 class="res-title">Ranks above the family carry most of it</h4>
+            <div class="res-chart"><svg viewBox="0 0 420 100" role="img" aria-label="family only +0.60; + order +0.71; full tree +1.76">
+<text x="0" y="21" font-size="13" fill="#374151">family only</text>
+<rect x="110" y="7" width="87" height="20" rx="4" fill="#9ca3af"/>
+<text x="205" y="22" font-size="13" fill="#374151">+0.60</text>
+<text x="0" y="53" font-size="13" fill="#374151">+ order</text>
+<rect x="110" y="39" width="102" height="20" rx="4" fill="#9ca3af"/>
+<text x="220" y="54" font-size="13" fill="#374151">+0.71</text>
+<text x="0" y="85" font-size="13" fill="#374151">full tree</text>
+<rect x="110" y="71" width="254" height="20" rx="4" fill="#ea580c"/>
+<text x="372" y="86" font-size="13" font-weight="700" fill="#ea580c">+1.76</text>
+</svg></div>
+            <p class="res-cap">CowBird PCK@0.1 gain over the shuffled tree. Family membership alone, the same information AniMer+ uses, recovers only about a third of it.</p>
+            
+          </div>
         </div>
       </div>
     </div>
